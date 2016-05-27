@@ -59,7 +59,7 @@ def message(bot, update):
         bot.sendMessage(update.message.chat_id, text="Какая Ваша должность?")
 
     elif state == "question2":
-            telegramuser.state = "question2"
+            telegramuser.state = "question3"
             telegramuser.post = update.message.text
             telegramuser.save()
             bot.sendMessage(update.message.chat_id, text="Ваш email?")
@@ -68,26 +68,35 @@ def message(bot, update):
         telegramuser.state = "question4"
         telegramuser.email = update.message.text
         telegramuser.save()
-        KEYBOARD = telegram.KeyboardButton("Телефон", request_contact=True)
+        KEYBOARD = [[telegram.KeyboardButton("Телефон", request_contact=True)]]
         reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
         bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Ваш телефон?")
 
     elif state == "question4":
         telegramuser.state = "main"
-        telegramuser.phone = update.message.text
+        if update.message.contact:
+            telegramuser.phone = update.message.contact.phone_number
+        else:
+            telegramuser.phone = update.message.text
         telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Визитка сохранена!")
+        KEYBOARD = [["Создать визитку"], ["Посмотреть визитку"]]
+        reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+        bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text="Визитка сохранена!")
 
 def inlinequery(bot, update):
     query = update.inline_query.query
+    print (update)
+    print (update.inline_query.from_user.id)
+    print (getcard(update.inline_query.from_user.id))
     results = list()
 
     results.append(InlineQueryResultArticle(id=uuid4(),
                                             title="Му Card",
                                             input_message_content=InputTextMessageContent(
-                                                query + getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
+                                                query + "\n\n" + getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
 
-    bot.answerInlineQuery(update.inline_query.id, results=results)
+    if query:
+        bot.answerInlineQuery(update.inline_query.id, results=results)
 
 
 def error(bot, update, error):
@@ -106,7 +115,7 @@ def main():
     dp.addHandler(CommandHandler("help", help))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.addHandler(MessageHandler([Filters.text], message))
+    dp.addHandler(MessageHandler([Filters.text, Filters.contact], message))
 
     dp.addHandler(InlineQueryHandler(inlinequery))
 
