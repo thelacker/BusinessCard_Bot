@@ -5,7 +5,6 @@ import logging
 from TOKEN import TOKEN
 from models import TelegramUser
 from uuid import uuid4
-import json
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,7 +29,7 @@ def help(bot, update):
 
 def getcard(chat_id):
     telegramuser, created = TelegramUser.get_or_create(chat_id=chat_id)
-    card = "\n<b>Имя:</b>\n" + str(telegramuser.first_name) + "\n<i>Адрес:</i>\n" + str(telegramuser.address)
+    card = str(telegramuser.first_name) + "\n" + str(telegramuser.post) + "\nTel: " + str(telegramuser.phone) +"\nEmail: " + str(telegramuser.email)
     return card
 
 
@@ -53,19 +52,31 @@ def message(bot, update):
         else:
             bot.sendMessage(update.message.chat_id, text="Я вас не понял")
 
-    if state == "question1":
+    elif state == "question1":
         telegramuser.state = "question2"
         telegramuser.first_name = update.message.text
         telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Какой Ваш адрес?")
+        bot.sendMessage(update.message.chat_id, text="Какая Ваша должность?")
 
-    if state == "question2":
-        telegramuser.state = "main"
-        telegramuser.address = update.message.text
+    elif state == "question2":
+            telegramuser.state = "question2"
+            telegramuser.post = update.message.text
+            telegramuser.save()
+            bot.sendMessage(update.message.chat_id, text="Ваш email?")
+
+    elif state == "question3":
+        telegramuser.state = "question4"
+        telegramuser.email = update.message.text
         telegramuser.save()
-        KEYBOARD = [["Создать визитку"], ["Посмотреть визитку"]]
+        KEYBOARD = telegram.KeyboardButton("Телефон", request_contact=True)
         reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
-        bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Визитка сохранена!")
+        bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Ваш телефон?")
+
+    elif state == "question4":
+        telegramuser.state = "main"
+        telegramuser.phone = update.message.text
+        telegramuser.save()
+        bot.sendMessage(update.message.chat_id, text="Визитка сохранена!")
 
 def inlinequery(bot, update):
     query = update.inline_query.query
@@ -74,7 +85,7 @@ def inlinequery(bot, update):
     results.append(InlineQueryResultArticle(id=uuid4(),
                                             title="Му Card",
                                             input_message_content=InputTextMessageContent(
-                                                query + getcard(update.inline_query.from_user.id))))
+                                                query + getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
 
     bot.answerInlineQuery(update.inline_query.id, results=results)
 
