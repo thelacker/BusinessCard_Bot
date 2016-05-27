@@ -25,6 +25,11 @@ def start(bot, update):
 def help(bot, update):
     bot.sendMessage(update.message.chat_id, text='Help!')
 
+def getcard(chat_id):
+    telegramuser, created = TelegramUser.get_or_create(chat_id=chat_id)
+    card = "<b>Имя:</b>\n" + str(telegramuser.first_name) + "\n<i>Адрес:</i>\n" + str(telegramuser.address)
+    return card
+
 
 def message(bot, update):
     telegramuser, created = TelegramUser.get_or_create(chat_id=update.message.chat_id)
@@ -40,7 +45,7 @@ def message(bot, update):
         elif update.message.text == "Посмотреть визитку":
             telegramuser.state = "main"
             telegramuser.save()
-            bot.sendMessage(update.message.chat_id, text="Вот Ваша визитка")
+            bot.sendMessage(update.message.chat_id, text=getcard(update.message.chat_id), parse_mode='HTML')
             return
         else:
             bot.sendMessage(update.message.chat_id, text="Я вас не понял")
