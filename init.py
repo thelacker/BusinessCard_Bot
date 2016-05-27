@@ -1,6 +1,8 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import telegram
 import logging
 from TOKEN import TOKEN
+from models import TelegramUser
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -12,15 +14,50 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
-    bot.sendMessage(update.message.chat_id, text='Hi!')
+    telegramuser, created = TelegramUser.get_or_create(chat_id = update.message.chat_id)
+    telegramuser.state = "main"
+    telegramuser.save()
+    KEYBOARD = [["Создать визитку"],["Посмотреть визитку"]]
+    reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+    bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text='Hi!')
 
 
 def help(bot, update):
     bot.sendMessage(update.message.chat_id, text='Help!')
 
 
-def echo(bot, update):
-    bot.sendMessage(update.message.chat_id, text=update.message.text)
+def message(bot, update):
+    telegramuser, created = TelegramUser.get_or_create(chat_id=update.message.chat_id)
+    state = telegramuser.state
+
+    if state == "main":
+        if update.message.text == "Создать визитку":
+            telegramuser.state = "question1"
+            telegramuser.save()
+            bot.sendMessage(update.message.chat_id, reply_markup = telegram.ReplyKeyboardHide(), text="Как Вас зовут?")
+            return
+
+        elif update.message.text == "Посмотреть визитку":
+            telegramuser.state = "main"
+            telegramuser.save()
+            bot.sendMessage(update.message.chat_id, text="Вот Ваша визитка")
+            return
+        else:
+            bot.sendMessage(update.message.chat_id, text="Я вас не понял")
+
+    if state == "question1":
+        telegramuser.state = "question2"
+        telegramuser.first_name = update.message.text
+        telegramuser.save()
+        bot.sendMessage(update.message.chat_id, text="Какой Ваш адрес?")
+
+    if state == "question2":
+        telegramuser.state = "main"
+        telegramuser.address = update.message.text
+        telegramuser.save()
+        KEYBOARD = [["Создать визитку"], ["Посмотреть визитку"]]
+        reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+        bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Визитка сохранена!")
 
 
 def error(bot, update, error):
@@ -39,7 +76,7 @@ def main():
     dp.addHandler(CommandHandler("help", help))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.addHandler(MessageHandler([Filters.text], echo))
+    dp.addHandler(MessageHandler([Filters.text], message))
 
     # log all errors
     dp.addErrorHandler(error)

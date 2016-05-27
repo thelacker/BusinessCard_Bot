@@ -13,7 +13,7 @@ class TelegramUser(BaseModel):
     address = CharField(null=True, default="")
     phone = IntegerField(null=True)
     deleted = BooleanField(default=False)
-    state = CharField(default='main')
+    state = CharField(default="main", null=False)
 
 def initTables():
     db.connect()
