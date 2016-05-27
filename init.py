@@ -29,7 +29,7 @@ def help(bot, update):
 
 def getcard(chat_id):
     telegramuser, created = TelegramUser.get_or_create(chat_id=chat_id)
-    card = str(telegramuser.first_name) + "\n" + str(telegramuser.post) + "\nTel: " + str(telegramuser.phone) +"\nEmail: " + str(telegramuser.email)
+    card = "Моя виртуальная визитка:\n" + str(telegramuser.first_name) + "\n" + str(telegramuser.post) + "\nTel: " + str(telegramuser.phone) +"\nEmail: " + str(telegramuser.email)
     return card
 
 
@@ -85,17 +85,15 @@ def message(bot, update):
 
 def inlinequery(bot, update):
     query = update.inline_query.query
-    print (update)
     print (update.inline_query.from_user.id)
-    print (getcard(update.inline_query.from_user.id))
     results = list()
 
     results.append(InlineQueryResultArticle(id=uuid4(),
                                             title="Му Card",
                                             input_message_content=InputTextMessageContent(
-                                                query + "\n\n" + getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
+                                                getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
 
-    if query:
+    if query == "send":
         bot.answerInlineQuery(update.inline_query.id, results=results)
 
 
