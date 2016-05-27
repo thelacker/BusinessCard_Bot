@@ -69,7 +69,6 @@ def message(bot, update):
 
 def inlinequery(bot, update):
     query = update.inline_query.query
-    print (update.inline_query.from_user.id)
     results = list()
 
     results.append(InlineQueryResultArticle(id=uuid4(),
