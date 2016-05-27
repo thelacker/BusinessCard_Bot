@@ -7,6 +7,7 @@ class BaseModel(Model):
     class Meta:
         database = db
 
+
 class TelegramUser(BaseModel):
     chat_id = IntegerField(unique=True)
     first_name = CharField(null=True, default="")
@@ -14,6 +15,7 @@ class TelegramUser(BaseModel):
     phone = IntegerField(null=True)
     deleted = BooleanField(default=False)
     state = CharField(default='main')
+
 
 def initTables():
     db.connect()
