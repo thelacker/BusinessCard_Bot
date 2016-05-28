@@ -10,9 +10,6 @@ class BaseModel(Model):
 
 class TelegramUser(BaseModel):
     chat_id = IntegerField(unique=True)
-    first_name = CharField(null=True, default="")
-    address = CharField(null=True, default="")
-    phone = IntegerField(null=True)
     deleted = BooleanField(default=False)
     state = CharField(default='main')
 
