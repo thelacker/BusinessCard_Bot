@@ -1,8 +1,10 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler
+from telegram import InlineQueryResultArticle, InputTextMessageContent
 import telegram
 import logging
-from models import TelegramUser
 from TOKEN import TOKEN
+from models import TelegramUser
+from uuid import uuid4
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -17,44 +19,83 @@ def start(bot, update):
     telegramuser, created = TelegramUser.get_or_create(chat_id = update.message.chat_id)
     telegramuser.state = "main"
     telegramuser.save()
-    KEYBORAD = [["Создать визитку"], ["Получить визитку"]]
-    reply_markup = telegram.ReplyKeyboardMarkup(KEYBORAD)
-    bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Hi")
+    KEYBOARD = [["Создать визитку"],["Посмотреть визитку"]]
+    reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+    bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text='Hi!')
 
 
 def help(bot, update):
     bot.sendMessage(update.message.chat_id, text='Help!')
 
+def getcard(chat_id):
+    telegramuser, created = TelegramUser.get_or_create(chat_id=chat_id)
+    card = "Моя виртуальная визитка:\n" + str(telegramuser.first_name) + "\n" + str(telegramuser.post) + "\nTel: " + str(telegramuser.phone) +"\nEmail: " + str(telegramuser.email)
+    return card
+
 
 def message(bot, update):
-    telegramuser, created = TelegramUser.get_or_create(chat_id = update.message.chat_id)
-    if telegramuser.state == "main":
+    telegramuser, created = TelegramUser.get_or_create(chat_id=update.message.chat_id)
+    state = telegramuser.state
+
+    if state == "main":
         if update.message.text == "Создать визитку":
             telegramuser.state = "question1"
             telegramuser.save()
-            bot.sendMessage(update.message.chat_id, text="Как вас зовут?")
+            bot.sendMessage(update.message.chat_id, reply_markup = telegram.ReplyKeyboardHide(), text="Как Вас зовут?")
+            return
 
-    if telegramuser.state == "question1":
+        elif update.message.text == "Посмотреть визитку":
+            telegramuser.state = "main"
+            telegramuser.save()
+            bot.sendMessage(update.message.chat_id, text=getcard(update.message.chat_id), parse_mode='HTML')
+            return
+        else:
+            bot.sendMessage(update.message.chat_id, text="Я вас не понял")
+
+    elif state == "question1":
         telegramuser.state = "question2"
+        telegramuser.first_name = update.message.text
         telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Какая у вас должность?")
+        bot.sendMessage(update.message.chat_id, text="Какая Ваша должность?")
 
-    if telegramuser.state == "question2":
-        telegramuser.state = "question3"
-        telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Какой ваш email?")
+    elif state == "question2":
+            telegramuser.state = "question3"
+            telegramuser.post = update.message.text
+            telegramuser.save()
+            bot.sendMessage(update.message.chat_id, text="Ваш email?")
 
-    if telegramuser.state == "question3":
+    elif state == "question3":
         telegramuser.state = "question4"
+        telegramuser.email = update.message.text
         telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Какой ваш телефон?")
+        KEYBOARD = [[telegram.KeyboardButton("Телефон", request_contact=True)]]
+        reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+        bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text="Ваш телефон?")
 
-    if telegramuser.state == "question4":
+    elif state == "question4":
         telegramuser.state = "main"
+        if update.message.contact:
+            telegramuser.phone = update.message.contact.phone_number
+        else:
+            telegramuser.phone = update.message.text
         telegramuser.save()
-        KEYBORAD = [["Создать визитку"], ["Получить визитку"]]
-        reply_markup = telegram.ReplyKeyboardMarkup(KEYBORAD)
-        bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text="Ваша визитка сохранена")
+        KEYBOARD = [["Создать визитку"], ["Посмотреть визитку"]]
+        reply_markup = telegram.ReplyKeyboardMarkup(KEYBOARD)
+        bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text="Визитка сохранена!")
+
+def inlinequery(bot, update):
+    query = update.inline_query.query
+    print (update.inline_query.from_user.id)
+    results = list()
+
+    results.append(InlineQueryResultArticle(id=uuid4(),
+                                            title="Му Card",
+                                            input_message_content=InputTextMessageContent(
+                                                getcard(update.inline_query.from_user.id)), parse_mode='HTML'))
+
+    if query == "send":
+        bot.answerInlineQuery(update.inline_query.id, results=results)
+
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
@@ -72,7 +113,9 @@ def main():
     dp.addHandler(CommandHandler("help", help))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.addHandler(MessageHandler([Filters.text], message))
+    dp.addHandler(MessageHandler([Filters.text, Filters.contact], message))
+
+    dp.addHandler(InlineQueryHandler(inlinequery))
 
     # log all errors
     dp.addErrorHandler(error)
