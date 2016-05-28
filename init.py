@@ -49,11 +49,12 @@ def message(bot, update):
         telegramuser.save()
         bot.sendMessage(update.message.chat_id, text="Какой ваш телефон?")
 
-
     if telegramuser.state == "question4":
         telegramuser.state = "main"
         telegramuser.save()
-        bot.sendMessage(update.message.chat_id, text="Ваша визитка с")
+        KEYBORAD = [["Создать визитку"], ["Получить визитку"]]
+        reply_markup = telegram.ReplyKeyboardMarkup(KEYBORAD)
+        bot.sendMessage(update.message.chat_id, reply_markup = reply_markup, text="Ваша визитка сохранена")
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
