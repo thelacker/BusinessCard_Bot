@@ -1,4 +1,5 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import telegram
 import logging
 from TOKEN import TOKEN
 
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
-    bot.sendMessage(update.message.chat_id, text='Hi!')
+    KEYBORAD = [["Создать визитку"], ["Получить визитку"]]
+    reply_markup = telegram.ReplyKeyboardMarkup(KEYBORAD)
+    bot.sendMessage(update.message.chat_id, reply_markup=reply_markup, text='Hi!')
 
 
 def help(bot, update):
@@ -20,6 +23,7 @@ def help(bot, update):
 
 
 def echo(bot, update):
+
     bot.sendMessage(update.message.chat_id, text=update.message.text)
 
 
