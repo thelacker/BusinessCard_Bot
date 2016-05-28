@@ -1,6 +1,7 @@
 from peewee import *
+import os
 
-db = PostgresqlDatabase("bcards", user="bcarduser", password="123")
+db = SqliteDatabase(os.path.join(os.path.dirname(os.path.realpath(__file__)),'telegrambot.db'))
 
 
 class BaseModel(Model):
@@ -17,3 +18,5 @@ class TelegramUser(BaseModel):
 def initTables():
     db.connect()
     db.create_tables([TelegramUser], True)
+
+initTables()
